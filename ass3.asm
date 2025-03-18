@@ -13,7 +13,7 @@ section .data
 	mov rsi, %1
 	mov rdx, %2
 	syscall
-%endm
+%endmacro
 
 
 section .bss
