@@ -1,150 +1,136 @@
+section .data
+    rmodemsg db 10, 'Processor is in Real Mode'
+    rmsg_len equ $-rmodemsg
 
+    pmodemsg db 10, 'Processor is in Protected Mode'
+    pmsg_len equ $-pmodemsg
 
-%macro IO 4
-    mov rax, %1
-    mov rdi, %2
-    mov rsi, %3
-    mov rdx, %4
+    gdtmsg db 10, 'GDT Contents are::'
+    gmsg_len equ $-gdtmsg
+
+    ldtmsg db 10, 'LDT Contents are::'
+    lmsg_len equ $-ldtmsg
+
+    idtmsg db 10, 'IDT Contents are::'
+    imsg_len equ $-idtmsg
+
+    trmsg db 10, 'Task Register Contents are::'
+    tmsg_len equ $-trmsg
+
+    mswmsg db 10, 'Machine Status Word::'
+    mmsg_len equ $-mswmsg
+
+    colmsg db ':'
+
+    newline db 10  
+
+section .bss
+    gdt resd 1
+        resw 1
+    ldt resw 1
+    idt resd 1
+        resw 1
+    tr resw 1
+
+    cr0_data resd 1
+
+    dnum_buff resb 04
+
+%macro print 2
+    mov rax,01
+    mov rdi,01
+    mov rsi,%1
+    mov rdx,%2
     syscall
 %endmacro
 
-
-
-section .data
-
-    Prot db "Protected Mode : ",10
-    Protlen equ $-Prot
-    
-    Real db "Real Mode : ",10
-    Reallen equ $-Real
-    
-    msw db "MSW  : "
-    mswlen equ $-msw
-    
-    gdtr db 10,"GDTR : "
-    gdtrlen equ $-gdtr
-    
-    idt db 10,"IDTR : "
-    idtlen equ $-idt
-    
-    tr db 10,"TR : "
-    trlen equ $-tr
-    
-    ld db 10,"LDTR : "
-    ldlen equ $-ld
-    
-    colsgn db ":"
-
-
-    
-section .bss
-    gdt resb 8                      
-    gdtli resb 2                    
-    msw1 resb 2                     
-    temp resb 1                     
-    result1 resq 1      
-    result2 resw 1
-    idt1 resb 8                     
-    idtli resb 2                    
-    ldt resb 2                      
-    t_r resb 2                      
-
-
-
 section .text
-    global _start
-
+global _start
 _start:
-    mov rsi,msw1
-    smsw [rsi]
-    mov ax,[rsi]
-    bt ax,0                         
-    jc next                         
-    IO 1,1,Real,Reallen             
-    jmp z1
+    smsw eax                  
+    mov [cr0_data],eax
 
-next: 
-    IO 1,1,Prot,Protlen 
+    bt rax,1                  
+    jc prmode
+    print rmodemsg,rmsg_len
+    jmp nxt1
 
-z1:
-    IO 1,1,msw,mswlen               
-    mov ax,word[msw1]
-    call display2 
-    
-    IO 1,1,gdtr,gdtrlen
-    mov rsi,gdt
-    sgdt [rsi]
-    mov rax, qword[rsi]
-    call display1  
-    
-    IO 1,1,colsgn,1                 
-    
-    mov rsi,gdtli
-    mov ax,word[rsi]
-    call display2                   
-    
-    IO 1,1,ld,ldlen
-    mov rsi,ldt
-    sldt [rsi]
-    mov rax, [ldt]
-    call display2                   
-    
-    IO 1,1,idt,idtlen
-    mov rsi,idt1
-    sidt [rsi]
-    mov rax, [idt1]
-    call display1                   
-    
-    IO 1,1,colsgn,1
-    
-    mov ax,[idtli]
-    call display2                   
-    
-    IO 1,1,tr,trlen
-    mov rsi,t_r
-    str [rsi]
-    mov rax, [t_r]
-    call display2                    
-    
-    ; Exit System Call
-    IO 60,0,0,0 
+prmode:
+    print pmodemsg,pmsg_len
 
-; ----------- PROCEDURES -----------
-    
-display1:
+nxt1:
+    sgdt [gdt]
+    sldt [ldt]
+    sidt [idt]
+    str [tr]
+    print gdtmsg,gmsg_len
 
-        mov bp,16                   
-    up1:
-        rol ax,4
-        mov qword[result1],rax
-        and al,0fh
-        cmp al,09h
-        jbe next1
-        add al,07h
-    next1:
-        add al,30h
-        mov byte[temp],al
-        IO 1,1,temp,1
-        mov rax,qword[result1]
-        dec bp
-        jnz up1
-        ret
+    mov bx,[gdt+4]
+    call print_num
 
-display2:  
-                                    
-        mov bp,4                     
-    up2:
-        rol ax,4
-        mov word[result2],ax
-        and al,0fh
-        cmp al,09h
-        jbe next2
-        add al,07h
-    next2:
-        add al,30h
-        mov byte[temp],al
-        IO 1,1,temp,1
-        mov ax,word[result2]
-        dec bp
-        jnz up2
-        ret
+    mov bx,[gdt+2]
+    call print_num
+
+    print colmsg,1
+
+    mov bx,[gdt]
+    call print_num
+
+    print ldtmsg,lmsg_len
+    mov bx,[ldt]
+    call print_num
+
+    print idtmsg,imsg_len
+
+    mov bx,[idt+4]
+    call print_num
+
+    mov bx,[idt+2]
+    call print_num
+   
+    print colmsg,1
+
+    mov bx,[idt]
+    call print_num
+
+    print trmsg,tmsg_len
+
+    mov bx,[tr]
+    call print_num
+
+    print mswmsg,mmsg_len
+
+    mov bx,[cr0_data+2]
+    call print_num
+
+    mov bx,[cr0_data]
+    call print_num
+
+    print newline,1
+
+exit:    
+    mov rax,60
+    xor rdi,rdi
+    syscall
+
+print_num:
+    mov rsi,dnum_buff  
+    mov rcx,04          
+
+up1:    
+    rol bx,4            
+    mov dl,bl          
+    and dl,0fh        
+    add dl,30h        
+    cmp dl,39h          
+    jbe skip1          
+    add dl,07h          
+
+skip1:  
+    mov [rsi],dl      
+    inc rsi            
+    loop up1          
+                       
+
+    print dnum_buff,4
+    ret
