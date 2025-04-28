@@ -1,60 +1,59 @@
-;Assembly program accept 5 decimal number and display them using an array
-
 section .data
-	m1 db "Accept five 64-bits number: ",10,13          ;this 10,13 gives newline and a carriage return
-	l1 equ $-m1
-	m2 db "Display five 64-bits number: ",10,13
-	l2 equ $-m2
-section .bss
-	array resb 100
-	counter resb 2
-section .text
-	global _start
-_start:
 
-	;first we need to display the message m1
-	mov rax,1
-	mov rdi,1
-	mov rsi, m1
-	mov rdx,l1
+hello: db "Enter 5 hexadecimal digits: ", 0xA
+len: equ $-hello
+
+show:db "The 5 numbers are: ", 0xA
+len2:equ $-show
+
+cnt1: db 05h   		;Loop counter (5times)
+cnt2: db 05h   		;Loop counter (5times)
+
+section .bss
+arr resb 85    		;Buffer of 85bytes to store user input
+
+section .text
+global _start
+_start:
+;Enter 5 hexadecimal digits message
+	mov rax, 01	;System call for write
+	mov rdi, 01	;File descriptor 1 is stdout
+	mov rsi, hello	;Pointer to message
+	mov rdx, len	;Message length
 	syscall
-	
-	;now we need to take 5 numbers and store them in the array
-	mov byte[counter],05             ;setup of counter
-	mov rbx,0                        ;base register = 0
-	accept:                          ;loops starts here with the variable accept here.. you can change the name as per your choice
-	mov rax,0
-	mov rdi,0
-	mov rsi,array
-	add rsi, rbx                      ;rsi+rbx
-	mov rdx,17                        ;17 because 16 bits for number and 1 bit for enter
+
+mov r8, arr		;r8 points to buffer
+l1:
+	mov rax, 00	;System call number for read
+	mov rdi, 00	;File descriptor 0 is sdin
+	mov rsi, r8	;Store input at r8 position
+	mov rdx, 17	;Read 17bytes
 	syscall
-	add rbx,17
-	dec byte[counter]                 ; dec the counter to 0 
-	jnz accept                        ;this will jump out of the loop when the counter becomes 0
-	
-	;now we need to display the message m2
-	mov rax,1
-	mov rdi,1
-	mov rsi,m2
-	mov rdx,l2
+
+add r8, 17		;Move pointer to next block
+dec byte[cnt1]		;Decreases counter
+jnz l1			;Jump if counter is not zero
+
+;Print 5 numbers message
+	mov rax, 01
+	mov rdi, 01
+	mov rsi, show
+	mov rdx, len2
 	syscall
-	
-	;now we need to display the array
-	mov byte[counter],05
-	mov rbx,0
-	display:
-	mov rax,1
-	mov rdi,1
-	mov rsi,array
-	add rsi,rbx
-	mov rdx,17
+
+mov r8, arr
+l2:
+	mov rax, 01	;System call for write
+	mov rdi, 01	;File descriptor 1 is stdout
+	mov rsi, r8	;Store output at r8
+	mov rdx, 17	;Write 17 bytes
 	syscall
-	add rbx,17
-	dec byte[counter]
-	jnz display
-	
-	;exit the program
-	mov rax,60
-	mov rdi,0
-	syscall
+
+add r8, 17
+dec byte[cnt2]
+jnz l2
+
+mov rax, 60
+mov rdi, 90
+syscall
+ret			;standard exit procedure
