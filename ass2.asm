@@ -19,33 +19,33 @@ _start:
 	;take input from user
 	mov rax,0
 	mov rdi,0
-	mov rsi,string
-	mov rdx,20
+	mov rsi,string				;Buffer to store input
+	mov rdx,20				;Read upto 20bytes
 	syscall
 	
 	;convert input string into hexadecimal
-	xor rbx,rbx
-	mov rbx,rax
-	mov rdi,res
-	mov cx,16
+	xor rbx,rbx				;Clears rbx register
+	mov rbx,rax				;Moves input length to rbx
+	mov rdi,res				;Points rdi to result buffer
+	mov cx,16				;Sets counter to 16
 
 	l1: 
-		rol rbx,4
-		mov al,bl
-		and al,0FH
-		cmp al,09H
-		jg l2
+		rol rbx,4			;Rotate left by 4 bits
+		mov al,bl			;Copy lowest byte to al
+		and al,0FH			;Mask to get only lowest 4bits
+		cmp al,09H			;Compare with 9
+		jg l2				;If >9, goto 12
 	
-	add al,30H
+	add al,30H				;Convert to ASCII no.
 	jmp l3
 	
 	l2:
-		add al , 37H
+		add al , 37H			;Convert to ASCII Letters(A-F)
 	l3:
-		mov[rdi],al
-	inc rdi
-	dec cx
-	jnz l1
+		mov[rdi],al			;Store ASCII chars in result buffer
+	inc rdi					;Move to next position in buffer
+	dec cx					;Decrement Counter
+	jnz l1					;If counter is not zero, continue loop
 	
 	; Print the hexadecimal result string
    	mov rax, 1      
